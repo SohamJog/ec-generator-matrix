@@ -4,3 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+ff = { version = "0.13", features = ["derive"] }
+wee_alloc = "0.4.4"
+
+smallvec = "1.11.2"     
+rand = "0.9.1"  
