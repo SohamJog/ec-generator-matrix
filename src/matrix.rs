@@ -217,6 +217,35 @@ impl<F: Field + Copy + PrimeField> Matrix<F> {
         }
         result
     }
+
+    pub fn test_generator(rows: usize, cols: usize) -> Self {
+        assert!(rows >= cols);
+        let mut m = Matrix::new(rows, cols);
+        for r in 0..rows {
+            for c in 0..cols {
+                acc!(m, r, c) = F::from_u128((r * cols + c + 1) as u128);
+            }
+        }
+        m
+    }
+    pub fn cauchy(x: &[F], y: &[F]) -> Self {
+        assert!(x.len() > 0 && y.len() > 0);
+        let rows = x.len();
+        let cols = y.len();
+
+        let mut result = Self::new(rows, cols);
+        for r in 0..rows {
+            for c in 0..cols {
+                let denom = x[r] + y[c];
+                assert!(
+                    !bool::from(denom.is_zero()),
+                    "Cauchy matrix has zero denominator"
+                );
+                acc!(result, r, c) = denom.invert().unwrap();
+            }
+        }
+        result
+    }
 }
 
 #[cfg(test)]
