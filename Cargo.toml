@@ -1,5 +1,5 @@
 [package]
-name = "ec-generator-matrix"
+name = "ec_generator_matrix"
 version = "0.1.0"
 edition = "2024"
 
@@ -9,3 +9,8 @@ wee_alloc = "0.4.4"
 
 smallvec = "1.11.2"     
 rand = "0.9.1"  
+criterion = "0.6.0"
+
+[[bench]]
+name = "reed_solomon_bench"
+harness = false

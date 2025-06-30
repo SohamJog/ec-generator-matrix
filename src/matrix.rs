@@ -246,6 +246,81 @@ impl<F: Field + Copy + PrimeField> Matrix<F> {
         }
         result
     }
+    // pub fn systematic_identity_generator(n: usize, k: usize) -> Self {
+    //     assert!(n >= k, "n must be >= k for systematic matrix");
+
+    //     let mut matrix = Self::new(n, k);
+
+    //     // First k rows = identity
+    //     for i in 0..k {
+    //         acc!(matrix, i, i) = F::ONE;
+    //     }
+
+    //     for r in k..n {
+    //         let r_val = F::from_u128((r - k + 1) as u128);
+    //         for c in 0..k {
+    //             acc!(matrix, r, c) = exp(r_val, c);
+    //         }
+    //     }
+
+    //     matrix
+    // }
+
+    /// Systematic generator matrix: G = [I; P] where P is Vandermonde matrix using x = 1..n-k
+    pub fn systematic_with_sequential_vandermonde(n: usize, k: usize) -> Self {
+        assert!(n >= k);
+        let mut result = Self::new(n, k);
+
+        // Fill I on top
+        for i in 0..k {
+            acc!(result, i, i) = F::ONE;
+        }
+
+        // Fill P (Vandermonde) below I
+        for i in 0..(n - k) {
+            let x = F::from_u128((i + 1) as u128);
+            for j in 0..k {
+                acc!(result, k + i, j) = exp(x, j);
+            }
+        }
+
+        result
+    }
+
+    /// Systematic generator matrix: G = [I; P] where P is Vandermonde matrix using random x values
+    pub fn systematic_with_random_vandermonde(n: usize, k: usize) -> Self {
+        use rand::{thread_rng, Rng};
+        use std::collections::HashSet;
+
+        assert!(n >= k);
+        let mut result = Self::new(n, k);
+
+        // Fill I on top
+        for i in 0..k {
+            acc!(result, i, i) = F::ONE;
+        }
+
+        // Generate unique random x values
+        let mut rng = thread_rng();
+        let mut seen = HashSet::new();
+        let mut xs = vec![];
+
+        while xs.len() < (n - k) {
+            let raw = rng.gen_range(1..127); // Avoid zero
+            if seen.insert(raw) {
+                xs.push(F::from_u128(raw));
+            }
+        }
+
+        // Fill P (Vandermonde) below I
+        for (i, x) in xs.iter().enumerate() {
+            for j in 0..k {
+                acc!(result, k + i, j) = exp(*x, j);
+            }
+        }
+
+        result
+    }
 }
 
 #[cfg(test)]
@@ -253,9 +328,9 @@ mod tests {
     extern crate alloc;
 
     use super::Matrix;
-    use crate::ff::PrimeField;
     use crate::field::F127;
     use alloc::vec;
+    use ff::PrimeField;
 
     macro_rules! matrix {
         (

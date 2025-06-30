@@ -95,6 +95,64 @@ mod tests {
         assert_eq!(recovered, message);
     }
 
+    // #[test]
+    // fn test_rs_encode_decode_with_systematic_identity_generator() {
+    //     let message = vec![
+    //         F127::from_u128(10),
+    //         F127::from_u128(20),
+    //         F127::from_u128(30),
+    //     ];
+    //     let k = message.len();
+    //     let n = 6;
+
+    //     let generator = Matrix::<F127>::systematic_identity_generator(n, k);
+
+    //     let mut shares = encode_rs_with_matrix(&message, &generator);
+
+    //     // Simulate erasures
+    //     shares[2].value = None;
+    //     shares[4].value = None;
+
+    //     let recovered = decode_rs_with_matrix(&shares, &generator, k);
+    //     assert_eq!(recovered, message);
+    // }
+
+    #[test]
+    fn test_rs_with_sequential_vandermonde_systematic() {
+        let message = vec![F127::from_u128(1), F127::from_u128(2), F127::from_u128(3)];
+        let k = message.len();
+        let n = 6;
+
+        let generator = Matrix::<F127>::systematic_with_sequential_vandermonde(n, k);
+
+        let mut shares = encode_rs_with_matrix(&message, &generator);
+        shares[1].value = None;
+        shares[4].value = None;
+
+        let recovered = decode_rs_with_matrix(&shares, &generator, k);
+        assert_eq!(recovered, message);
+    }
+
+    #[test]
+    fn test_rs_with_random_vandermonde_systematic() {
+        let message = vec![
+            F127::from_u128(10),
+            F127::from_u128(20),
+            F127::from_u128(30),
+        ];
+        let k = message.len();
+        let n = 6;
+
+        let generator = Matrix::<F127>::systematic_with_random_vandermonde(n, k);
+
+        let mut shares = encode_rs_with_matrix(&message, &generator);
+        shares[0].value = None;
+        shares[5].value = None;
+
+        let recovered = decode_rs_with_matrix(&shares, &generator, k);
+        assert_eq!(recovered, message);
+    }
+
     #[test]
     #[should_panic]
     fn test_rs_encode_decode_with_test_generator() {
