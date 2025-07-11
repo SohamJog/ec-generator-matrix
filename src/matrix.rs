@@ -246,25 +246,6 @@ impl<F: Field + Copy + PrimeField> Matrix<F> {
         }
         result
     }
-    // pub fn systematic_identity_generator(n: usize, k: usize) -> Self {
-    //     assert!(n >= k, "n must be >= k for systematic matrix");
-
-    //     let mut matrix = Self::new(n, k);
-
-    //     // First k rows = identity
-    //     for i in 0..k {
-    //         acc!(matrix, i, i) = F::ONE;
-    //     }
-
-    //     for r in k..n {
-    //         let r_val = F::from_u128((r - k + 1) as u128);
-    //         for c in 0..k {
-    //             acc!(matrix, r, c) = exp(r_val, c);
-    //         }
-    //     }
-
-    //     matrix
-    // }
 
     /// Systematic generator matrix: G = [I; P] where P is Vandermonde matrix using x = 1..n-k
     pub fn systematic_with_sequential_vandermonde(n: usize, k: usize) -> Self {
@@ -316,6 +297,72 @@ impl<F: Field + Copy + PrimeField> Matrix<F> {
         for (i, x) in xs.iter().enumerate() {
             for j in 0..k {
                 acc!(result, k + i, j) = exp(*x, j);
+            }
+        }
+
+        result
+    }
+
+    pub fn random_vandermonde(n: usize, k: usize) -> Self {
+        use rand::{thread_rng, Rng};
+        use std::collections::HashSet;
+
+        assert!(n >= k);
+        let mut result = Self::new(n, k);
+
+        let mut rng = thread_rng();
+        let mut seen = HashSet::new();
+        let mut xs = vec![];
+
+        while xs.len() < n {
+            let raw = rng.gen_range(1..127); // avoid 0
+            if seen.insert(raw) {
+                xs.push(F::from_u128(raw));
+            }
+        }
+
+        for i in 0..n {
+            for j in 0..k {
+                acc!(result, i, j) = exp(xs[i], j);
+            }
+        }
+
+        result
+    }
+
+    pub fn random_matrix(n: usize, k: usize) -> Self {
+        use rand::{thread_rng, Rng};
+
+        let mut rng = thread_rng();
+        let mut result = Self::new(n, k);
+
+        for i in 0..n {
+            for j in 0..k {
+                let val = rng.gen_range(0..127);
+                acc!(result, i, j) = F::from_u128(val);
+            }
+        }
+
+        result
+    }
+
+    pub fn systematic_with_random_rows(n: usize, k: usize) -> Self {
+        use rand::{thread_rng, Rng};
+
+        assert!(n >= k);
+        let mut rng = thread_rng();
+        let mut result = Self::new(n, k);
+
+        // Identity on top
+        for i in 0..k {
+            acc!(result, i, i) = F::ONE;
+        }
+
+        // Random rows below
+        for i in k..n {
+            for j in 0..k {
+                let val = rng.gen_range(0..127);
+                acc!(result, i, j) = F::from_u128(val);
             }
         }
 
