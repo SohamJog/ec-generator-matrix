@@ -9,6 +9,8 @@ use ec_generator_matrix::matrix::Matrix;
 use ec_generator_matrix::reed_solomon::{decode_rs_with_matrix, encode_rs_with_matrix, Share};
 use rand::prelude::IndexedRandom;
 
+use rand::seq::SliceRandom;
+use reed_solomon_simd::{ReedSolomonDecoder, ReedSolomonEncoder};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Once;
 
@@ -97,6 +99,25 @@ fn bench_encoding(c: &mut Criterion) {
 
     c.bench_function("encode::systematic_random_rows", |b| {
         b.iter(|| encode_rs_with_matrix(&message, &gen_systematic_random_rows));
+    });
+    c.bench_function("encode::reed_solomon_simd", |b| {
+        b.iter(|| {
+            let mut encoder = ReedSolomonEncoder::new(k, n - k, 64).unwrap();
+
+            let shards: Vec<_> = (0..k)
+                .map(|i| {
+                    let mut shard = [0u8; 64];
+                    shard[0] = i as u8;
+                    shard
+                })
+                .collect();
+
+            for shard in &shards {
+                encoder.add_original_shard(shard).unwrap();
+            }
+
+            let _ = encoder.encode().unwrap();
+        });
     });
 }
 
@@ -188,13 +209,54 @@ fn bench_decoding(c: &mut Criterion) {
     //     c,
     // );
 
-    decode_with_count(
-        &gen_systematic_random_rows,
-        &message,
-        erasures,
-        "decode::systematic_random_rows",
-        c,
-    );
+    // decode_with_count(
+    //     &gen_systematic_random_rows,
+    //     &message,
+    //     erasures,
+    //     "decode::systematic_random_rows",
+    //     c,
+    // );
+    let mut encoder = ReedSolomonEncoder::new(k, n - k, 64).unwrap();
+
+    // Generate original shards
+    let shards: Vec<_> = (0..k)
+        .map(|i| {
+            let mut shard = [0u8; 64];
+            shard[0] = i as u8;
+            shard
+        })
+        .collect();
+
+    for shard in &shards {
+        encoder.add_original_shard(shard).unwrap();
+    }
+
+    let result = encoder.encode().unwrap();
+    let recovery: Vec<_> = result.recovery_iter().collect();
+
+    // Now benchmark decoding only
+    c.bench_function("decode_only::reed_solomon_simd", |b| {
+        b.iter(|| {
+            let mut rng = rand::thread_rng();
+            let mut decoder = ReedSolomonDecoder::new(k, n - k, 64).unwrap();
+
+            let mut all_indices: Vec<_> = (0..n).collect();
+            all_indices.shuffle(&mut rng);
+            let available_indices = &all_indices[0..k]; // k available shards
+
+            for &idx in available_indices {
+                if idx < k {
+                    decoder.add_original_shard(idx, &shards[idx]).unwrap();
+                } else {
+                    decoder
+                        .add_recovery_shard(idx - k, &recovery[idx - k])
+                        .unwrap();
+                }
+            }
+
+            let _ = decoder.decode().unwrap();
+        });
+    });
 }
 
 criterion_group!(

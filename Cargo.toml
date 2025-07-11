@@ -10,6 +10,8 @@ wee_alloc = "0.4.4"
 smallvec = "1.11.2"     
 rand = "0.9.1"  
 criterion = "0.6.0"
+reed-solomon-simd = "3.0.1"
+
 
 [[bench]]
 name = "reed_solomon_bench"
